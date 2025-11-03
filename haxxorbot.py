@@ -64,8 +64,11 @@ async def process_line(line, channel):
     embed.add_field(name="IP", value=ip, inline=False)
     embed.add_field(name="Location", value=map_link, inline=False)
     embed.add_field(name="Host", value=org_link, inline=False)
-
-    thumbnail = f"https://flagsapi.com/{info['country']}/flat/64.png"
+    
+    if info['country'] == "US":
+        thumbnail = f"http://www.spangledwithstars.com/images/{info['region'].lower()}-state-flag.png"
+    else: thumbnail = f"https://flagsapi.com/{info['country']}/flat/64.png"
+        
     embed.set_thumbnail(url=thumbnail)
 
     await channel.send(embed=embed)
