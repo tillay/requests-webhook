@@ -69,9 +69,9 @@ async def process_line(line):
         # get data from caddy log
         remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
         uri = data["request"]["uri"]
-        user_agent = data["request"]["headers"]["User-Agent"][0]
+        user_agent = data["request"]["headers"].get("User-Agent", ["not specified"])[0]
+        
         cf_server = data["request"]["headers"]["Cf-Ray"][0].split("-")[1]
-
         country_code = data["request"]["headers"]["Cf-Ipcountry"][0]
         country = country_dict.get(country_code.lower())
         region_code = data["request"]["headers"]["Cf-Region-Code"][0]
@@ -88,16 +88,14 @@ async def process_line(line):
             f"{(data["request"]["host"] + '/' + uri).replace('//', '/')}"
         )
     except KeyError as k:
-        print("rejected due to weird headers")
-        try: offender_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
-        except KeyError: offender_ip = data['request']['remote_ip'] + "-"
+        print("weird headers detected")
         headers = []
         for header_name, header_value in data["request"]["headers"].items():
             headers.append(f"{header_name}: `{header_value[0]}`")
         post_embed({
             "title": f"Bad headers!", "color": 0xf5b342,
             "fields": [
-                {"name": "IP", "value": offender_ip, "inline": True},
+                {"name": "IP", "value": data['request']['remote_ip'], "inline": True},
                 {"name": "Request", "value": data["request"]["uri"], "inline": True},
                 {"name": "Headers", "value": '\n'.join(headers), "inline": False},
                 {"name": "Error", "value": str(k), "inline": False}
@@ -156,8 +154,9 @@ async def process_line(line):
         else company_block or connection_block
     )
 
+    # add region info for countries i know the geography of pretty well
     location_text = ", ".join(filter(None, [
-        city, region if country_code in ["DE", "US", "GB"] else None, country
+        city, region if country_code in ["DE", "US", "GB", "CA"] else None, country
     ]))
 
     location_link = (
@@ -177,6 +176,7 @@ async def process_line(line):
     tags = []
     security_data = visitor_info["security"]
 
+    # do regional (state) flag if its from the USA or UK 
     if country_code in ["GB", "US"]: icon_code = f"{country_code.lower()}-{region_code.lower()}"
     else: icon_code = country_code.lower()
     icon_link = f"https://flagcdn.com/160x120/{icon_code}.png"
@@ -220,8 +220,7 @@ async def process_line(line):
         else:
             embed_title += "Visitor"
     except Exception as e:
-        print("error:", e)
-        tags.append("errored")
+        print("Error setting category:", e)
 
     embed = {
         "title": f"{embed_title} Detected",
