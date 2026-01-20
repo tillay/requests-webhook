@@ -223,11 +223,6 @@ async def process_line(line):
         print("error:", e)
         tags.append("errored")
 
-    # levi detection - remove in prod
-    if ("Amazon" in organization_link) and security_data["is_vpn"]:
-        embed_title = "Levi"
-        icon_link = "https://m.tilley.lol/leevi.png"
-
     embed = {
         "title": f"{embed_title} Detected",
         "color": embed_color,
