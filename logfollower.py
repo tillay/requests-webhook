@@ -70,16 +70,20 @@ async def process_line(line):
         remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
         uri = data["request"]["uri"]
         user_agent = data["request"]["headers"].get("User-Agent", ["not specified"])[0]
-        
         cf_server = data["request"]["headers"]["Cf-Ray"][0].split("-")[1]
         country_code = data["request"]["headers"]["Cf-Ipcountry"][0]
-        country = country_dict.get(country_code.lower())
-        region_code = data["request"]["headers"]["Cf-Region-Code"][0]
-        region = data["request"]["headers"]["Cf-Region"][0]
         city = data["request"]["headers"]["Cf-Ipcity"][0]
-        lat = data["request"]["headers"]["Cf-Iplatitude"][0]
-        lon = data["request"]["headers"]["Cf-Iplongitude"][0]
-
+            
+        # check to see if cloudflare thinks its tor
+        if country_code == "T1" and city == "T1": is_tor = True
+        else:
+            is_tor = False
+            country = country_dict.get(country_code.lower())
+            region_code = data["request"]["headers"]["Cf-Region-Code"][0]
+            region = data["request"]["headers"]["Cf-Region"][0]
+            lat = data["request"]["headers"]["Cf-Iplatitude"][0]
+            lon = data["request"]["headers"]["Cf-Iplongitude"][0]
+            
         status = str(data["status"])
         timestamp = float(data["ts"])
 
@@ -87,6 +91,7 @@ async def process_line(line):
             f"{'https://' if data['level'] == 'info' else ''}"
             f"{(data["request"]["host"] + '/' + uri).replace('//', '/')}"
         )
+        print("test")
     except KeyError as k:
         print("weird headers detected")
         headers = []
@@ -106,8 +111,6 @@ async def process_line(line):
         f"{datetime.fromtimestamp(timestamp).strftime("%m/%d/%Y at %H:%M:%S")}\n\n"
         f"received request for {request_path}\n"
         f"returned code {status} (outcome: {data["level"]})\n"
-        f"remote ip: {remote_ip}\n"
-        f"user agent: {user_agent}\n"
     )
 
     global prev_uri, prev_ip, prev_time
@@ -132,9 +135,18 @@ async def process_line(line):
         return
 
     prev_uri, prev_ip, prev_time = uri, remote_ip, timestamp
-
+    
     visitor_info, is_new_visitor = get_visitor_info(remote_ip)
-
+    
+    # fallback to visitor info if tor (cloudflare doesnt give location info)
+    if is_tor: # cloudflare info is usually better so this is just a fallback
+        country_code = visitor_info["location"]["country"]["code"]
+        city = visitor_info["location"]["city"]["name"]
+        country = country_dict.get(country_code.lower())
+        region_code, region = "", visitor_info["region"]["name"]
+        lat = visitor_info["location"]["city"]["latitude"]
+        lon = visitor_info["location"]["city"]["longitude"]
+        
     # build nice looking links for embed
     company_block = format_block(
         visitor_info["company"]["name"],
@@ -177,7 +189,7 @@ async def process_line(line):
     security_data = visitor_info["security"]
 
     # do regional (state) flag if its from the USA or UK 
-    if country_code in ["GB", "US"]: icon_code = f"{country_code.lower()}-{region_code.lower()}"
+    if country_code in ["GB", "US"] and not is_tor: icon_code = f"{country_code.lower()}-{region_code.lower()}"
     else: icon_code = country_code.lower()
     icon_link = f"https://flagcdn.com/160x120/{icon_code}.png"
     ip_link = f"[{remote_ip}](https://api.ipregistry.co/{remote_ip}?key=tryout)"
@@ -197,7 +209,7 @@ async def process_line(line):
             embed_color = 0xf38020
             if "WARP" in organization_link:
                 embed_title += " Warp User"
-        elif security_data['is_tor']:
+        elif is_tor and security_data['is_tor']:
             embed_title += "Tor User"
             embed_color = 0x8506c9
         elif security_data['is_vpn']:
