@@ -29,7 +29,7 @@ def sub_search(string, array): return any(substring.lower() in string.lower() fo
 def get_visitor_info(remote_ip):
     visitor_info = None
     is_new_visitor = True
-    
+
     if not os.path.exists("cache.txt"):
         open("cache.txt", "w").close()
     with open("cache.txt") as cache_file:
@@ -39,20 +39,20 @@ def get_visitor_info(remote_ip):
                 visitor_info = line_json
                 is_new_visitor = False
                 break
-    
+
     # run this if they are new here
     if not visitor_info:
         print("detected ip is new")
-    
+
         visitor_info = requests.get(
             f"https://api.ipregistry.co/{remote_ip}"
             f"?key={os.getenv("IPREGISTRY_TOKEN")}",
             timeout=4).json()
-    
+
         # append line to cache file
         with open("cache.txt", "a") as cache_file:
             cache_file.write(json.dumps(visitor_info) + "\n")
-    
+
         # if cache file is over 1000 lines now, remove the first line
         with open("cache.txt", "r") as cache_file: lines = cache_file.readlines()
         if len(lines) > 1000:
@@ -60,7 +60,7 @@ def get_visitor_info(remote_ip):
                 cache_file.writelines(lines[1:])
 
     return visitor_info, is_new_visitor
-                
+
 prev_uri, prev_ip, prev_time = None, None, 0
 
 async def process_line(line):
@@ -87,7 +87,7 @@ async def process_line(line):
             f"{'https://' if data['level'] == 'info' else ''}"
             f"{(data["request"]["host"] + '/' + uri).replace('//', '/')}"
         )
-    except KeyError:
+    except KeyError as k:
         print("rejected due to weird headers")
         try: offender_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
         except KeyError: offender_ip = data['request']['remote_ip'] + "-"
@@ -99,7 +99,8 @@ async def process_line(line):
             "fields": [
                 {"name": "IP", "value": offender_ip, "inline": True},
                 {"name": "Request", "value": data["request"]["uri"], "inline": True},
-                {"name": "Headers", "value": '\n'.join(headers), "inline": False}
+                {"name": "Headers", "value": '\n'.join(headers), "inline": False},
+                {"name": "Error", "value": str(k), "inline": False}
             ]})
         return
 
@@ -221,6 +222,11 @@ async def process_line(line):
     except Exception as e:
         print("error:", e)
         tags.append("errored")
+
+    # levi detection - remove in prod
+    if ("Amazon" in organization_link) and security_data["is_vpn"]:
+        embed_title = "Levi"
+        icon_link = "https://m.tilley.lol/leevi.png"
 
     embed = {
         "title": f"{embed_title} Detected",
