@@ -2,12 +2,14 @@
 
 a python script i made to log requests to my webserver for debugging purposes
 
-this has only been tested on caddy
+this has only been tested on caddy and probably doesn't work on other webservers
+
+this needs a connection proxied through [cloudflare](https://cloudflare.com/) with the [extra geolocation info in headers](https://developers.cloudflare.com/network/ip-geolocation/) enabled
 
 to use:
 1. clone the repo and such
 2. add an env and change the line `load_dotenv("/root/secrets/env")` in the script to have the path to your env
-3. make a [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and an [ipregistry](https://ipregistry.co/) token
+3. make a [discord webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and get an [ipregistry](https://ipregistry.co/) token
 4. make sure your env has the following lines for the secrets
 ```
 FELLAS_WEBHOOK=https://discord.com/api/webhooks/....
