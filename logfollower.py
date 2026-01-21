@@ -79,8 +79,8 @@ async def process_line(line):
         else:
             is_tor = False
             country = country_dict.get(country_code.lower())
-            region_code = data["request"]["headers"]["Cf-Region-Code"][0]
-            region = data["request"]["headers"]["Cf-Region"][0]
+            region_code = data["request"]["headers"].get("Cf-Region-Code", [""])[0]
+            region = data["request"]["headers"].get("Cf-Region", [""])[0]
             lat = data["request"]["headers"]["Cf-Iplatitude"][0]
             lon = data["request"]["headers"]["Cf-Iplongitude"][0]
             
