@@ -223,12 +223,16 @@ async def process_line(line):
             embed_title += "Starlink User"
             embed_color = 0x888888
             tags.append("satellite")
-        elif sub_search(organization_link, bot_isps) or sub_search(user_agent, ["http", "bot"]):
-            if security_data['is_attacker'] or security_data['is_threat']:
-                embed_title = "Potentially Hostile "
-                embed_color = 0xff0000
-            else: embed_color = 0xf5d742
+        elif ((sub_search(organization_link, bot_isps) or sub_search(user_agent, ["http", "bot"]))
+            and not security_data['is_threat']):
             embed_title += "Bot"
+            embed_color = 0xf5d742
+        elif security_data['is_threat']:
+            embed_title = "Potential Hostile"
+            embed_color = 0xff0000
+        elif "curl" in user_agent:
+            embed_title = "Connection"
+            embed_color = 0xff8fca
         else:
             embed_title += "Visitor"
     except Exception as e:
