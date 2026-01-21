@@ -4,7 +4,7 @@ a python script i made to log requests to my webserver for debugging purposes
 
 this has only been tested on [caddy](https://caddyserver.com/) and probably doesn't work on other webservers
 
-this needs a connection proxied through [cloudflare](https://cloudflare.com/) with the [extra geolocation info in headers](https://developers.cloudflare.com/network/ip-geolocation/) enabled
+this needs a connection proxied through [cloudflare](https://cloudflare.com/) with the [visitor location info in headers](https://developers.cloudflare.com/network/ip-geolocation/) enabled
 
 to use:
 1. clone the repo and such
