@@ -24,4 +24,3 @@ log {
 }
 ```
 7. run `python3 logfollower.py` in the same directory as the script to start it. I recommend using tmux.
-```
