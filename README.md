@@ -2,7 +2,7 @@
 
 a python script i made to log requests to my webserver for debugging purposes
 
-this has only been tested on caddy and probably doesn't work on other webservers
+this has only been tested on [caddy](https://caddyserver.com/) and probably doesn't work on other webservers
 
 this needs a connection proxied through [cloudflare](https://cloudflare.com/) with the [extra geolocation info in headers](https://developers.cloudflare.com/network/ip-geolocation/) enabled
 
@@ -16,11 +16,11 @@ to use:
 FELLAS_WEBHOOK=https://discord.com/api/webhooks/....
 IPREGISTRY_TOKEN=ira_....
 ```
-6. make sure your caddy config has logging enabled like so (if you change the path you have to change it in the code too)
+6. make sure your caddy config has [logging enabled](https://caddyserver.com/docs/caddyfile/options#log) like so (if you change the path you have to change it in the code too)
 ```
 log {
     output file /var/log/caddy/caddy.log
     format json
 }
 ```
-7. run `python3 logfollower.py` in the same directory as the script to start it. I recommend using tmux.
+7. run `python3 logfollower.py` in the same directory as the script to start it. I recommend using [tmux](https://tmuxcheatsheet.com/).
