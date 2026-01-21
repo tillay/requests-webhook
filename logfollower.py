@@ -168,7 +168,7 @@ async def process_line(line):
 
     # add region info for countries i know the geography of pretty well
     location_text = ", ".join(filter(None, [
-        city, region if country_code in ["DE", "US", "GB", "CA"] else None, country
+        city, region if country_code in ["DE", "US", "GB", "CA"] and region != "" else None, country
     ]))
 
     location_link = (
@@ -189,7 +189,7 @@ async def process_line(line):
     security_data = visitor_info["security"]
 
     # do regional (state) flag if its from the USA or UK 
-    if country_code in ["GB", "US"] and not is_tor: icon_code = f"{country_code.lower()}-{region_code.lower()}"
+    if country_code in ["GB", "US"] and not is_tor and region != "": icon_code = f"{country_code.lower()}-{region_code.lower()}"
     else: icon_code = country_code.lower()
     icon_link = f"https://flagcdn.com/160x120/{icon_code}.png"
     ip_link = f"[{remote_ip}](https://api.ipregistry.co/{remote_ip}?key=tryout)"
