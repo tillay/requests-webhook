@@ -24,3 +24,12 @@ log {
 }
 ```
 7. run `python3 logfollower.py` in the same directory as the script to start it. I recommend using [tmux](https://tmuxcheatsheet.com/).
+
+---
+other programs also exist for random network testing tasks
+
+latency_tester gives the ping latency in ms to different places in the world
+
+add_test_ip lets you search city names or country codes to get latency testing ips in different cities
+
+the ip and city infos for latency testing are stored in entries.json

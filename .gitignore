@@ -1,3 +1,4 @@
 *.txt
 *.env
 *.out
+.idea
