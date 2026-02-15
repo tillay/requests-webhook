@@ -287,9 +287,10 @@ async def main():
                             {"name": "Failed line", "value": line, "inline": False}
                         ]})
             else: await asyncio.sleep(0.1)
-
-try: asyncio.run(main())
-except KeyboardInterrupt: status_embed("Stopped with keyboard!", 0xff007f)
-except Exception as error: status_embed(f"Entire program went up in flames: {error}", 0xfa2323)
+            
+if __name__ == "__main__":
+    try: asyncio.run(main())
+    except KeyboardInterrupt: status_embed("Stopped with keyboard!", 0xff007f)
+    except Exception as error: status_embed(f"Entire program went up in flames: {error}", 0xfa2323)
 
 
