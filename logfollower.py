@@ -14,7 +14,7 @@ cf_ranges = [ipaddress.ip_network(x) for x in v4+v6 if x]
 good_bots = requests.get("https://raw.githubusercontent.com/AnTheMaker/GoodBots/refs/heads/main/all.ips").text.splitlines()
 good_bots = [ipaddress.ip_network(x) for x in good_bots if x]
 
-def post_embed(embed): requests.post(os.getenv("FELLAS_WEBHOOK"), json={"embeds": [embed]}, timeout=5)
+def post_embed(embed): requests.post(os.getenv("FELLAS_WEBHOOK"), json={"embeds": [embed]})
 def status_embed(title, color): post_embed({"title": title, "color": color})
 
 # get dict for cloudflare abbreviation to country
@@ -52,8 +52,8 @@ def get_visitor_info(remote_ip):
 
         visitor_info = requests.get(
             f"https://api.ipregistry.co/{remote_ip}"
-            f"?key={os.getenv("IPREGISTRY_TOKEN")}",
-            timeout=4).json()
+            f"?key={os.getenv("IPREGISTRY_TOKEN")}"
+        ).json()
 
         # append line to cache file
         with open("cache.txt", "a") as cache_file:
@@ -72,12 +72,12 @@ prev_uri, prev_ip, prev_time = None, None, 0
 async def process_line(line):
     data = json.loads(line)
     try:
-        # get data from caddy log
-        remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
+        # get data from caddy log`
         direct_ip = ipaddress.ip_address(data["request"]["remote_ip"])
         if not any(direct_ip in n for n in cf_ranges):
-            print("direct request ip doesnt seem to be cf")
+            print(f"direct request ip {direct_ip} doesnt seem to be cf")
             return
+        remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
 
         uri = data["request"]["uri"]
         user_agent = data["request"]["headers"].get("User-Agent", ["not specified"])[0]
@@ -130,7 +130,7 @@ async def process_line(line):
         return
     global prev_uri, prev_ip, prev_time
     if referer is not None:
-        print(f"refered from: {referer}")
+        print(f"referred from: {referer}")
         if (
                 prev_ip == remote_ip and
                 timestamp - prev_time < 5 and
@@ -147,7 +147,7 @@ async def process_line(line):
     prev_uri, prev_ip, prev_time = uri, remote_ip, timestamp
 
     visitor_info, is_new_visitor = get_visitor_info(remote_ip)
-    
+
     # build nice looking links for embed
     company_block = format_block(
         visitor_info["company"]["name"],
@@ -182,14 +182,10 @@ async def process_line(line):
         f"(https://mining.cloudflare.manfredi.io/pops/{cf_server})"
     )
 
-    # reverse lookup to see if there are domains attached to the ip
-    try: hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(remote_ip)
-    except socket.herror: hostname = None
-
     tags = []
     security_data = visitor_info["security"]
 
-    # do regional (state) flag if its from the USA or UK 
+    # do regional (state) flag if its from the USA or UK
     if country_code in ["GB", "US"] and region != "": icon_code = f"{country_code.lower()}-{region_code.lower()}"
     else: icon_code = country_code.lower()
     icon_link = f"https://flagcdn.com/160x120/{icon_code}.png"
@@ -223,7 +219,7 @@ async def process_line(line):
             embed_title += "Mobile User"
             embed_color = 0x0c9378
             tags.append("mobile")
-        elif hostname is not None and "starlink" in hostname:
+        elif "Starlink" in organization_link:
             embed_title += "Starlink User"
             embed_color = 0x888888
             tags.append("satellite")
@@ -237,8 +233,8 @@ async def process_line(line):
             embed_title += "Visitor"
     except Exception as e:
         print("Error setting category:", e)
-    
-    if "jq+" in uri: 
+
+    if "jq+" in uri:
         split_path = uri.split("/")
         cookie = base64.b64decode(split_path[3]).decode('utf-8')
         request_path = f"{split_path[2]}`{cookie}`"
@@ -268,10 +264,6 @@ async def process_line(line):
         embed['fields'].append({"name": "Tags", "value": ", ".join(tags), "inline": False})
         print(f"added tags: {tags}")
 
-    if hostname is not None:
-        embed["fields"].append({"name": "Detected domain", "value": hostname, "inline": False})
-        print("added detected domain", hostname)
-
     post_embed(embed)
     print("\nwebhook sent!")
     return
@@ -296,8 +288,8 @@ async def main():
                         ]})
             else: await asyncio.sleep(0.1)
 
-if __name__ == "__main__":
-    try: asyncio.run(main())
-    except KeyboardInterrupt: status_embed("Stopped with keyboard!", 0xff007f)
-    except Exception as error: status_embed(f"Entire program went up in flames: {error}", 0xfa2323)
+try: asyncio.run(main())
+except KeyboardInterrupt: status_embed("Stopped with keyboard!", 0xff007f)
+except Exception as error: status_embed(f"Entire program went up in flames: {error}", 0xfa2323)
+
 
