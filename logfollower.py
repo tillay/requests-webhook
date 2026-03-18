@@ -1,11 +1,9 @@
-import os, asyncio, json, socket, requests, aiofiles, ipaddress, base64
+import os, asyncio, json, requests, aiofiles, ipaddress, base64
 from dotenv import load_dotenv
 from datetime import datetime
 
 load_dotenv("/root/secrets/env")
 log_path = "/var/log/caddy/caddy.log"
-
-bot_requests = ["php", "git", "env", "wp", "xml", "api", "?"]
 
 v4 = requests.get("https://www.cloudflare.com/ips-v4/").text.splitlines()
 v6 = requests.get("https://www.cloudflare.com/ips-v6/").text.splitlines()
@@ -14,6 +12,7 @@ cf_ranges = [ipaddress.ip_network(x) for x in v4+v6 if x]
 good_bots = requests.get("https://raw.githubusercontent.com/AnTheMaker/GoodBots/refs/heads/main/all.ips").text.splitlines()
 good_bots = [ipaddress.ip_network(x) for x in good_bots if x]
 
+malicious_reqs = requests.get("https://raw.githubusercontent.com/v0re/dirb/refs/heads/master/wordlists/common.txt").text.splitlines()
 def post_embed(embed): requests.post(os.getenv("FELLAS_WEBHOOK"), json={"embeds": [embed]})
 def status_embed(title, color): post_embed({"title": title, "color": color})
 
@@ -74,16 +73,18 @@ async def process_line(line):
     try:
         # get data from caddy log`
         direct_ip = ipaddress.ip_address(data["request"]["remote_ip"])
-        if not any(direct_ip in n for n in cf_ranges):
+        cf_server = data["request"]["headers"]["Cf-Ray"][0].split("-")
+        if not any(direct_ip in n for n in cf_ranges) and len(cf_server)[0] != 16:
             print(f"direct request ip {direct_ip} doesnt seem to be cf")
             return
-        remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
-
+            
         uri = data["request"]["uri"]
+        remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
         user_agent = data["request"]["headers"].get("User-Agent", ["not specified"])[0]
         cf_server = data["request"]["headers"]["Cf-Ray"][0].split("-")[1]
         country_code = data["request"]["headers"]["Cf-Ipcountry"][0]
         city = data["request"]["headers"]["Cf-Ipcity"][0]
+        cf_ray = cf_server[1]
 
         country = country_dict.get(country_code.lower())
         region_code = data["request"]["headers"].get("Cf-Region-Code", [""])[0]
@@ -122,6 +123,8 @@ async def process_line(line):
         f"returned code {status} (outcome: {data["level"]})\n"
     )
 
+    print("got to fakes removal")
+
     if uri.lower() != uri and not "jq+" in uri and str(status) == "404":
         print("likely fake uri: " + uri)
         return
@@ -129,6 +132,9 @@ async def process_line(line):
         print ("likely fake referrer" + referer)
         return
     global prev_uri, prev_ip, prev_time
+
+    print("got to asset filtering")
+
     if referer is not None:
         print(f"referred from: {referer}")
         if (
@@ -140,13 +146,17 @@ async def process_line(line):
             return
 
     # filter out bad bot spam
-    if sub_search(request_path, bot_requests) or timestamp - prev_time < 0.1:
+    if (uri in malicious_reqs and data["level"] == "error") or timestamp - prev_time < 0.1:
         print(f"rejected due to likely spam")
         return
 
     prev_uri, prev_ip, prev_time = uri, remote_ip, timestamp
 
+    print("got to ip lookup")
+
     visitor_info, is_new_visitor = get_visitor_info(remote_ip)
+
+    print("got to text creation")
 
     # build nice looking links for embed
     company_block = format_block(
@@ -185,12 +195,18 @@ async def process_line(line):
     tags = []
     security_data = visitor_info["security"]
 
+    if visitor_info["company"]["type"] is not None:
+        tags.append(visitor_info["company"]["type"])
+    if visitor_info["connection"]["type"] is not None and not visitor_info["connection"]["type"] in tags:
+        tags.append(visitor_info["connection"]["type"])
+
     # do regional (state) flag if its from the USA or UK
     if country_code in ["GB", "US"] and region != "": icon_code = f"{country_code.lower()}-{region_code.lower()}"
     else: icon_code = country_code.lower()
     icon_link = f"https://flagcdn.com/160x120/{icon_code}.png"
     ip_link = f"[{remote_ip}](https://api.ipregistry.co/{remote_ip}?key=tryout)"
 
+    print("got to category selection")
     # set embed color and title details
     embed_title = ""
     embed_color = 0x3a3aff
@@ -239,6 +255,8 @@ async def process_line(line):
         cookie = base64.b64decode(split_path[3]).decode('utf-8')
         request_path = f"{split_path[2]}`{cookie}`"
 
+    print("got to embed creation")
+
     embed = {
         "title": f"{embed_title} Detected",
         "color": embed_color,
@@ -263,6 +281,7 @@ async def process_line(line):
     if tags:
         embed['fields'].append({"name": "Tags", "value": ", ".join(tags), "inline": False})
         print(f"added tags: {tags}")
+    print("got to embed posting")
 
     post_embed(embed)
     print("\nwebhook sent!")
@@ -287,7 +306,7 @@ async def main():
                             {"name": "Failed line", "value": line, "inline": False}
                         ]})
             else: await asyncio.sleep(0.1)
-            
+
 if __name__ == "__main__":
     try: asyncio.run(main())
     except KeyboardInterrupt: status_embed("Stopped with keyboard!", 0xff007f)
