@@ -73,18 +73,16 @@ async def process_line(line):
     try:
         # get data from caddy log`
         direct_ip = ipaddress.ip_address(data["request"]["remote_ip"])
-        cf_server = data["request"]["headers"]["Cf-Ray"][0].split("-")
-        if not any(direct_ip in n for n in cf_ranges) and len(cf_server)[0] != 16:
+        if not any(direct_ip in n for n in cf_ranges):
             print(f"direct request ip {direct_ip} doesnt seem to be cf")
             return
-            
-        uri = data["request"]["uri"]
         remote_ip = data["request"]["headers"]["Cf-Connecting-Ip"][0]
+
+        uri = data["request"]["uri"]
         user_agent = data["request"]["headers"].get("User-Agent", ["not specified"])[0]
         cf_server = data["request"]["headers"]["Cf-Ray"][0].split("-")[1]
         country_code = data["request"]["headers"]["Cf-Ipcountry"][0]
         city = data["request"]["headers"]["Cf-Ipcity"][0]
-        cf_ray = cf_server[1]
 
         country = country_dict.get(country_code.lower())
         region_code = data["request"]["headers"].get("Cf-Region-Code", [""])[0]
